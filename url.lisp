@@ -26,13 +26,16 @@
 
 (defun add-ia-data (base &key url timestamp)
   (quri:merge-uris
-   (format nil "/~aid_/~a" timestamp (quri:url-encode url))
+   (format nil "/web/~aid_/~a" timestamp (quri:url-encode url))
    base))
+
+;;Find out how to get warcs from internet archive
+;;(defun add-ia-data (base &key ))
 
 (defun make-cc-range-header (offset length)
   (list (cons "Range" (format nil "bytes=~a-~a" offset (+ offset length 1)))))
 
 (defun add-cc-data (base &key filename)
   (quri:merge-uris
-   base
-   filename))
+   filename
+   base))
