@@ -8,6 +8,7 @@
   :serial t
   :depends-on (#:alexandria #:dexador #:quri #:cl-json #:gadgets)
   :components ((:file "package")
+               (:file "warc")
                (:file "url")
                (:file "retry")
                (:file "crawly")))
