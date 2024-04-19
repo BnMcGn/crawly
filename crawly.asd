@@ -6,7 +6,8 @@
   :license  "Apache 2.0"
   :version "0.0.1"
   :serial t
-  :depends-on (#:alexandria #:dexador #:quri #:cl-json #:gadgets)
+  :depends-on (#:alexandria #:dexador #:quri #:cl-json #:gadgets 
+               #:flexi-streams)
   :components ((:file "package")
                (:file "warc")
                (:file "url")
