@@ -9,6 +9,7 @@
   :depends-on (#:alexandria #:dexador #:quri #:cl-json #:gadgets 
                #:flexi-streams)
   :components ((:file "package")
+               (:file "util")
                (:file "warc")
                (:file "url")
                (:file "retry")
