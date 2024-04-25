@@ -42,7 +42,6 @@
              (otherwise (let ((res (read-line stream nil :eof)))
                           (when (eq res :eof) (return nil)))))))
 
-
 (defun read-warc (stream)
   (let ((res nil))
     (stream-or-path stream stream
@@ -66,7 +65,6 @@
    stream-or-path
    (lambda (headers)
      (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
-       (and (string= warc-type "request")
+       (and (string= warc-type "response")
             (string= warc-target-uri url)
-            (> (parse-integer content-length) 700)
             (print (hu:hash->plist headers)))))))
