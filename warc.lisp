@@ -70,11 +70,21 @@
                                          t))))
                    (file-position stream (+ (file-position stream) clen)))))))
 
+(defun get-response-payload (stream length)
+  (let* ((start-pos (file-position stream))
+         (status (read-line stream))
+         (header (read-header stream))
+         (body-length (- length (- (file-position stream) start-pos))))
+    (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length))))
+
 (defun get-record-for-url (stream-or-path url)
-  (first-matching-record
-   stream-or-path
-   (lambda (headers)
-     (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
-       (and (string= warc-type "response")
-            (string= warc-target-uri url)
-            (print (hu:hash->plist headers)))))))
+  (stream-or-path stream-or-path stream
+    (let ((length (first-matching-record
+                   stream
+                   (lambda (headers)
+                     (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
+                       (and (string= warc-type "response")
+                            (string= warc-target-uri url))))
+                   :return-type :length)))
+      (when (< 0 length)
+        (get-response-payload stream length)))))
