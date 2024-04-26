@@ -21,19 +21,23 @@
           until (gadgets:length1 line)
           do (hu:collect k v))))
 
-(defun read-warc-record (stream &optional decider)
+(defun read-warc-header (stream)
   (let* ((wversion (gadgets:string-strip (read-line stream)))
          (header (read-header stream))
-         (len (parse-integer (gethash :content-length header)))
-         (read? (when decider (funcall decider header)))
-         (content (when read?
-                    (make-array (1- len)
-                              :element-type '(unsigned-byte 8);(stream-element-type stream)
-                              :fill-pointer t))))
-    (if read?
-        (read-sequence content stream)
+         (len (parse-integer (gethash :content-length header))))
+    (values header len wversion)))
+
+(defun read-chunk-to-octets (stream length)
+  (let ((content (make-array length :element-type '(unsigned-byte 8) :fill-pointer t)))
+    (read-sequence content stream)
+    content))
+
+(defun read-warc-record (stream &optional decider)
+  (multiple-value-bind (header len wversion) (read-warc-header stream)
+    (let* ((read? (when decider (funcall decider header))))
+      (unless read?
         (file-position stream (+ (file-position stream) len)))
-    (values header content wversion)))
+      (values header (when read? (read-chunk-to-octets stream (1- len))) wversion))))
 
 (defun queue-up-warc-record (stream)
   (loop do (case (peek-char nil stream nil :eof)
@@ -52,13 +56,19 @@
                  (push body res))))
     (nreverse res)))
 
-(defun first-matching-record (stream-or-path predicate)
+(defun first-matching-record (stream-or-path predicate &key (return-type :content))
   (stream-or-path stream-or-path stream
     (loop for next = (queue-up-warc-record stream)
           while next
-          do (multiple-value-bind (_ body __) (read-warc-record stream predicate)
-               (declare (ignore _ __))
-               (when body (return body))))))
+          do (multiple-value-bind (header clen) (read-warc-header stream)
+               (if (funcall predicate header)
+                   (return (case return-type
+                             (:content (read-chunk-to-octets stream (1- clen)))
+                             (:length clen)
+                             (:consume (progn
+                                         (file-position stream (+ (file-position stream) clen))
+                                         t))))
+                   (file-position stream (+ (file-position stream) clen)))))))
 
 (defun get-record-for-url (stream-or-path url)
   (first-matching-record
