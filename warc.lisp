@@ -56,6 +56,9 @@
                  (push body res))))
     (nreverse res)))
 
+(define-condition warc-record-not-found (error)
+  ((text :initarg :text :reader text)))
+
 (defun first-matching-record (stream-or-path predicate &key (return-type :content))
   (stream-or-path stream-or-path stream
     (loop for next = (queue-up-warc-record stream)
@@ -68,7 +71,8 @@
                              (:consume (progn
                                          (file-position stream (+ (file-position stream) clen))
                                          t))))
-                   (file-position stream (+ (file-position stream) clen)))))))
+                   (file-position stream (+ (file-position stream) clen))))
+          finally (error 'warc-record-not-found :text "Stream exhausted with no match"))))
 
 (defun get-response-payload (stream length)
   (let* ((start-pos (file-position stream))
@@ -78,13 +82,14 @@
     (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length))))
 
 (defun get-record-for-url (stream-or-path url)
-  (stream-or-path stream-or-path stream
-    (let ((length (first-matching-record
-                   stream
-                   (lambda (headers)
-                     (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
-                       (and (string= warc-type "response")
-                            (string= warc-target-uri url))))
-                   :return-type :length)))
-      (when (< 0 length)
-        (get-response-payload stream length)))))
+  (stream-or-path stream-or-path strx
+    (with-file-buffered-stream (strx stream)
+        (let ((length (first-matching-record
+                       stream
+                       (lambda (headers)
+                         (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
+                           (and (string= warc-type "response")
+                                (string= warc-target-uri url))))
+                       :return-type :length)))
+          (when (< 0 length)
+            (get-response-payload stream length))))))

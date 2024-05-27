@@ -68,8 +68,10 @@
 (defgeneric get-archive-from-capture (source capture)
   (:method ((source (eql :common-crawl)) capture)
     (gadgets:with-alist-keys ((:filename :offset :length) capture)
-      (dex:get (add-cc-data *cc-data-url* :filename filename)
-               :headers (make-cc-range-header offset length))))
+      (gzip-stream:make-gzip-input-stream
+       (dex:get (add-cc-data *cc-data-url* :filename filename)
+                :headers (make-cc-range-header offset length)
+                :want-stream t))))
   (:method ((source (eql :internet-archive)) capture)
     (gadgets:with-alist-keys ((:url :timestamp) capture)
-      (dex:get (add-ia-data *ia-index-url* :url url :timestamp timestamp)))))
+      (dex:get (add-ia-data *ia-index-url* :url url :timestamp timestamp) :want-stream t))))

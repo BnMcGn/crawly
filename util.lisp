@@ -11,3 +11,13 @@
                ,@body))
            (let ((,var (flexi-streams:make-flexi-stream ,stream-or-path)))
              ,@body)))))
+
+;;Because we can't get a 'file-position' out of chipz streams
+(defmacro with-file-buffered-stream ((in out) &body body)
+  (alexandria:with-gensyms (thandle ihandle)
+    `(uiop:with-temporary-file (:pathname path :stream ,ihandle :direction :output)
+       (uiop:copy-stream-to-stream ,in ,ihandle)
+       (finish-output ,ihandle)
+       (with-open-file (,thandle path :direction :input :element-type '(unsigned-byte 8))
+         (let ((,out (flexi-streams:make-flexi-stream ,thandle)))
+           ,@body)))))
