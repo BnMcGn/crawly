@@ -81,7 +81,22 @@
          (body-length (- length (- (file-position stream) start-pos))))
     (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length))))
 
-(defun get-record-for-url (stream-or-path url)
+(defun uri-tidify (uri)
+  (let* ((u (quri:uri uri))
+         (path (quri:uri-path u))
+         (path (if (alexandria:emptyp path) "/" path))
+         (host (quri:uri-host u))
+         (host (if (alexandria:starts-with-subseq "www." host)
+                   (subseq host 4)
+                   host))
+         (scheme (quri:uri-scheme u))
+         (scheme (if (eq "https" scheme) "http" scheme)))
+    (quri:copy-uri u :scheme scheme :path path :host host)))
+
+(defun uri-equalish (uri1 uri2)
+  (quri:uri= (uri-tidify uri1) (uri-tidify uri2)))
+
+(defun get-record-for-url (stream-or-path url &key (url-comparison #'uri-equalish))
   (stream-or-path stream-or-path strx
     (with-file-buffered-stream (strx stream)
         (let ((length (first-matching-record
@@ -89,7 +104,7 @@
                        (lambda (headers)
                          (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
                            (and (string= warc-type "response")
-                                (string= warc-target-uri url))))
+                                (funcall url-comparison warc-target-uri url))))
                        :return-type :length)))
           (when (< 0 length)
             (get-response-payload stream length))))))
