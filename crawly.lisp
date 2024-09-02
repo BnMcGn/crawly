@@ -47,6 +47,12 @@
                               data))
         data)))
 
+(defun resolve-redirect (source data)
+  (alexandria:if-let ((redir (gadgets:assoc-cdr :redirect data)))
+    (first
+     (url-search redir :limit 1 :source source :endpoints (list (gadgets:assoc-cdr :endpoint data))))
+    data))
+
 (defun url-search (search &key (limit 1000) filter (source :common-crawl) endpoints)
   (let ((endpoints (if endpoints
                        endpoints
@@ -58,12 +64,12 @@
                      (add-search e search :limit limit :filter filter)))))
         (when page
           (push (mapcar
-                 #'process-capture
+                 (lambda (x) (resolve-redirect source (process-capture x)))
                  (pre-process-captures
                   source
                   e
                   (cl-json:decode-json-from-string page))) res))))
-    (gadgets:flatten-1 (nreverse res))))
+    (remove-if-not #'identity (gadgets:flatten-1 (nreverse res)))))
 
 (defgeneric get-archive-from-capture (source capture)
   (:method ((source (eql :common-crawl)) capture)
