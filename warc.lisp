@@ -4,6 +4,9 @@
 
 (defun read-field (item)
   (multiple-value-bind (k v) (gadgets:split-sequence-on-subseq ":" item)
+    (when (< 100 (length k))
+      (log:error "Warc parse error: key too long")
+      (error "Key too long"))
     (list (alexandria:make-keyword (string-upcase (gadgets:string-strip k)))
           (gadgets:string-strip v))))
 
@@ -22,9 +25,18 @@
           do (hu:collect k v))))
 
 (defun read-warc-header (stream)
+  (log:info "Reading warc header")
   (let* ((wversion (gadgets:string-strip (read-line stream)))
          (header (read-header stream))
-         (len (parse-integer (gethash :content-length header))))
+         (clength (gethash :content-length header))
+         (len (when clength (parse-integer clength))))
+    (unless clength
+      (log:warn "Couldn't get content-length from warc header"))
+    (if (< 200 (length wversion))
+        (progn (log:debug "Warc version: " wversion)
+               (log:error "Overlength warc version string!"))
+        (log:info wversion))
+    (log:debug "Header keys: " (alexandria:hash-table-keys header))
     (values header len wversion)))
 
 (defun read-chunk-to-octets (stream length)

@@ -49,8 +49,10 @@
 
 (defun resolve-redirect (source data)
   (alexandria:if-let ((redir (gadgets:assoc-cdr :redirect data)))
-    (first
-     (url-search redir :limit 1 :source source :endpoints (list (gadgets:assoc-cdr :endpoint data))))
+    (progn
+      (log:info "Crawly: redirecting:" redir)
+      (first
+      (url-search redir :limit 1 :source source :endpoints (list (gadgets:assoc-cdr :endpoint data)))))
     data))
 
 (defun url-search (search &key (limit 1000) filter (source :common-crawl) endpoints)
@@ -69,7 +71,9 @@
                   source
                   e
                   (cl-json:decode-json-from-string page))) res))))
-    (remove-if-not #'identity (gadgets:flatten-1 (nreverse res)))))
+    (let ((res (remove-if-not #'identity (gadgets:flatten-1 (nreverse res)))))
+      (log:info (format nil "Crawly: url-search ~a result~:p from ~a" (length res) source))
+      res)))
 
 (defgeneric get-archive-from-capture (source capture)
   (:method ((source (eql :common-crawl)) capture)

@@ -7,7 +7,7 @@
   :version "0.0.1"
   :serial t
   :depends-on (#:alexandria #:dexador #:quri #:cl-json #:gadgets 
-               #:flexi-streams #:cl-hash-util #:gzip-stream)
+               #:flexi-streams #:cl-hash-util #:gzip-stream #:log4cl)
   :components ((:file "package")
                (:file "util")
                (:file "warc")
