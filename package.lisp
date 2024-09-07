@@ -7,4 +7,5 @@
    #:first-matching-record
    #:read-warc
    #:url-search
-   #:get-archive-from-capture))
+   #:get-archive-from-capture
+   #:capture-url))

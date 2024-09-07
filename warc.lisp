@@ -52,11 +52,18 @@
       (values header (when read? (read-chunk-to-octets stream (1- len))) wversion))))
 
 (defun queue-up-warc-record (stream)
-  (loop do (case (peek-char nil stream nil :eof)
-             (:eof (return nil))
-             (#\W (return t))
-             (otherwise (let ((res (read-line stream nil :eof)))
-                          (when (eq res :eof) (return nil)))))))
+  (log:debug "First char:" (peek-char nil stream nil :eof))
+  (let ((pos (file-position stream)))
+    (loop do (case (peek-char nil stream nil :eof)
+               (:eof (return nil))
+               (#\W
+                (let* ((currpos (file-position stream))
+                       (diff (- currpos pos)))
+                  (when (< 0 diff)
+                    (log:debug "moved up: " diff)))
+                (return t))
+               (otherwise (let ((res (read-line stream nil :eof)))
+                            (when (eq res :eof) (return nil))))))))
 
 (defun read-warc (stream)
   (let ((res nil))
@@ -76,6 +83,10 @@
     (loop for next = (queue-up-warc-record stream)
           while next
           do (multiple-value-bind (header clen) (read-warc-header stream)
+               (hu:with-keys (:warc-target-uri :content-type :warc-type) header
+                 (log:debug warc-target-uri)
+                 (log:debug content-type)
+                 (log:debug warc-type))
                (if (funcall predicate header)
                    (return (case return-type
                              (:content (read-chunk-to-octets stream (1- clen)))
@@ -83,7 +94,9 @@
                              (:consume (progn
                                          (file-position stream (+ (file-position stream) clen))
                                          t))))
-                   (file-position stream (+ (file-position stream) clen))))
+                   (progn
+                     (log:info "Skipping " clen)
+                     (file-position stream (+ (file-position stream) clen)))))
           finally (error 'warc-record-not-found :text "Stream exhausted with no match"))))
 
 (defun get-response-payload (stream length)

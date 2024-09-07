@@ -55,6 +55,9 @@
       (url-search redir :limit 1 :source source :endpoints (list (gadgets:assoc-cdr :endpoint data)))))
     data))
 
+(defun capture-url (capture)
+  (gadgets:assoc-cdr :url capture))
+
 (defun url-search (search &key (limit 1000) filter (source :common-crawl) endpoints)
   (let ((endpoints (if endpoints
                        endpoints
