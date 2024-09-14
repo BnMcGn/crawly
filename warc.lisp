@@ -104,7 +104,8 @@
          (status (read-line stream))
          (header (read-header stream))
          (body-length (- length (- (file-position stream) start-pos))))
-    (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length))))
+    (log:info (gethash :content-type header))
+    (values (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length)) header)))
 
 (defun uri-tidify (uri)
   (let* ((u (quri:uri uri))
