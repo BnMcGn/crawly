@@ -96,7 +96,11 @@
                                          t))))
                    (progn
                      (log:info "Skipping " clen)
-                     (file-position stream (+ (file-position stream) clen)))))
+                     (if (log:debug)
+                         (let* ((skipped (read-chunk-to-octets stream (1- clen)))
+                                (excerpt (gadgets:part-on-index skipped 200)))
+                           (log:debug excerpt))
+                         (file-position stream (+ (file-position stream) clen))))))
           finally (error 'warc-record-not-found :text "Stream exhausted with no match"))))
 
 (defun get-response-payload (stream length)
