@@ -98,7 +98,8 @@
                      (log:info "Skipping " clen)
                      (if (log:debug)
                          (let* ((skipped (read-chunk-to-octets stream (1- clen)))
-                                (excerpt (gadgets:part-on-index skipped 200)))
+                                (excerpt (flexi-streams:octets-to-string
+                                          (gadgets:part-on-index skipped 500))))
                            (log:debug excerpt))
                          (file-position stream (+ (file-position stream) clen))))))
           finally (error 'warc-record-not-found :text "Stream exhausted with no match"))))
@@ -129,12 +130,20 @@
 (defun get-record-for-url (stream-or-path url &key (url-comparison #'uri-equalish))
   (stream-or-path stream-or-path strx
     (with-file-buffered-stream (strx stream)
-        (let ((length (first-matching-record
-                       stream
-                       (lambda (headers)
-                         (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
-                           (and (string= warc-type "response")
-                                (funcall url-comparison warc-target-uri url))))
-                       :return-type :length)))
-          (when (< 0 length)
-            (get-response-payload stream length))))))
+      (restart-case
+          (let ((length (first-matching-record
+                         stream
+                         (lambda (headers)
+                           (hu:with-keys (:warc-type :warc-target-uri :content-length) headers
+                             (and (string= warc-type "response")
+                                  (funcall url-comparison warc-target-uri url))))
+                         :return-type :length)))
+            (when (< 0 length)
+              (get-response-payload stream length)))
+        (copy-raw-warc (filename)
+          :report "Copy the uncompressed warc file to a specified location for manual analysis"
+          :interactive (lambda ()
+                         (terpri)
+                         (print "Enter a pathname: ")
+                         (list (read)))
+          (uiop:copy-file *buffered-file-path* filename))))))
