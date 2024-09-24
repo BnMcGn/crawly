@@ -39,13 +39,17 @@
                           finally (return (list* (cons :endpoint endpoint) c)))))))
 
 (defun process-capture (data)
-  (gadgets:with-alist-keys ((:offset :length) data)
-    (if length
-        (remove-if-not #'identity
-                       (list* (when offset (cons :offset (parse-integer offset)))
-                              (cons :length (parse-integer length))
-                              data))
-        data)))
+  (gadgets:with-alist-keys ((:offset :length :status) data)
+    (if (string= "304" status)
+        (progn
+          (log:info "304 found: Moving on...")
+          nil)
+      (if length
+          (remove-if-not #'identity
+                         (list* (when offset (cons :offset (parse-integer offset)))
+                                (cons :length (parse-integer length))
+                                data))
+          data))))
 
 (defun resolve-redirect (source data)
   (alexandria:if-let ((redir (gadgets:assoc-cdr :redirect data)))
