@@ -33,10 +33,10 @@
     (unless clength
       (log:warn "Couldn't get content-length from warc header"))
     (if (< 200 (length wversion))
-        (progn (log:debug "Warc version: " wversion)
+        (progn (log:debug "Warc version: ~a" wversion)
                (log:error "Overlength warc version string!"))
-        (log:info wversion))
-    (log:debug "Header keys: " (alexandria:hash-table-keys header))
+        (log:info "Warc version: ~a" wversion))
+    (log:debug "Header keys: ~a" (alexandria:hash-table-keys header))
     (values header len wversion)))
 
 (defun read-chunk-to-octets (stream length)
@@ -52,7 +52,7 @@
       (values header (when read? (read-chunk-to-octets stream (1- len))) wversion))))
 
 (defun queue-up-warc-record (stream)
-  (log:debug "First char:" (peek-char nil stream nil :eof))
+  (log:debug "First char: ~a" (peek-char nil stream nil :eof))
   (let ((pos (file-position stream)))
     (loop do (case (peek-char nil stream nil :eof)
                (:eof (return nil))
@@ -60,7 +60,7 @@
                 (let* ((currpos (file-position stream))
                        (diff (- currpos pos)))
                   (when (< 0 diff)
-                    (log:debug "moved up: " diff)))
+                    (log:debug "moved up: ~a" diff)))
                 (return t))
                (otherwise (let ((res (read-line stream nil :eof)))
                             (when (eq res :eof) (return nil))))))))
@@ -95,7 +95,7 @@
                                          (file-position stream (+ (file-position stream) clen))
                                          t))))
                    (progn
-                     (log:info "Skipping " clen)
+                     (log:info "Skipping ~a" clen)
                      (if (log:debug)
                          (let* ((skipped (read-chunk-to-octets stream (1- clen)))
                                 (excerpt (flexi-streams:octets-to-string
@@ -109,7 +109,8 @@
          (status (read-line stream))
          (header (read-header stream))
          (body-length (- length (- (file-position stream) start-pos))))
-    (log:info (gethash :content-type header))
+    (log:info "status: ~a" status)
+    (log:info ":content-type ~a" (gethash :content-type header))
     (values (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length)) header)))
 
 (defun uri-tidify (uri)
