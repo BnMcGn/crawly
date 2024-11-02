@@ -51,12 +51,19 @@
                                 data))
           data))))
 
+(defparameter *redirect-count* 3)
 (defun resolve-redirect (source data)
-  (alexandria:if-let ((redir (gadgets:assoc-cdr :redirect data)))
+  (alexandria:if-let ((redir (gadgets:assoc-cdr :redirect data))
+                      (*redirect-count* (if (< 0 *redirect-count*)
+                                            (1- *redirect-count*)
+                                            (progn
+                                              (log:info "Running out of redirects")
+                                              nil))))
     (progn
       (log:info "Crawly: redirecting: ~a" redir)
       (first
-      (url-search redir :limit 1 :source source :endpoints (list (gadgets:assoc-cdr :endpoint data)))))
+      (url-search redir :limit 1 :source source
+                        :endpoints (list (gadgets:assoc-cdr :endpoint data)))))
     data))
 
 (defun capture-url (capture)
@@ -77,8 +84,12 @@
                  (pre-process-captures
                   source
                   e
-                  (cl-json:decode-json-from-string page))) res))))
-    (let ((res (remove-if-not #'identity (gadgets:flatten-1 (nreverse res)))))
+                  (cl-json:decode-json-from-string page)))
+                res))))
+    (let ((res (remove-if-not (lambda (x)
+                                (and x
+                                     (not (equal "301" (gadgets:assoc-cdr :status x)))))
+                              (gadgets:flatten-1 (nreverse res)))))
       (log:info "Crawly: url-search ~a result~:p from ~a" (length res) source)
       res)))
 
