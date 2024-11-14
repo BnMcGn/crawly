@@ -111,7 +111,11 @@
          (body-length (- length (- (file-position stream) start-pos))))
     (log:info "status: ~a" status)
     (log:info ":content-type ~a" (gethash :content-type header))
-    (values (flexi-streams:octets-to-string (read-chunk-to-octets stream body-length)) header)))
+    (values (flexi-streams:octets-to-string
+             (read-chunk-to-octets stream body-length)
+             ;;We'll take a chance on this
+             :external-format :utf-8)
+            header)))
 
 (defun uri-tidify (uri)
   (let* ((u (quri:uri uri))
